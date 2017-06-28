@@ -450,6 +450,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated
 {
+    if(tokenView.selected) {
+        if([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:)]) {
+            [self.delegate tokenInputView:self didDoubleTapTokenView:tokenView];
+        }
+    }
+    
     [tokenView setSelected:YES animated:animated];
     for (CLTokenView *otherTokenView in self.tokenViews) {
         if (otherTokenView != tokenView) {

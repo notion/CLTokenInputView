@@ -25,6 +25,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class CLTokenInputView;
+@class CLTokenView;
 @protocol CLTokenInputViewDelegate <NSObject>
 
 @optional
@@ -68,6 +69,14 @@ NS_ASSUME_NONNULL_BEGIN
  * frames to make sure the token view still fits.
  */
 - (void)tokenInputView:(CLTokenInputView *)view didChangeHeightTo:(CGFloat)height;
+
+
+/**
+ * Called when a token has been double tapped. This is neccessary for 
+ * if you need to take an action on a selected token
+ */
+
+- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView;
 
 @end
 

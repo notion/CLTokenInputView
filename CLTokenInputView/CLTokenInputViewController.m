@@ -131,6 +131,11 @@
     [self.view layoutIfNeeded];
 }
 
+- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView
+{
+    NSLog(@"Double tap works!");
+}
+
 
 #pragma mark - UITableViewDataSource
 
