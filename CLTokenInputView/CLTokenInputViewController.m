@@ -122,7 +122,6 @@
 
 - (void)tokenInputViewDidBeginEditing:(CLTokenInputView *)view
 {
-    
     NSLog(@"token input view did begin editing: %@", view);
     view.accessoryView = [self contactAddButton];
     [self.view removeConstraint:self.tableViewTopLayoutConstraint];
