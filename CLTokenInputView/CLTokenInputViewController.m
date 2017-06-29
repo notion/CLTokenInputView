@@ -130,9 +130,9 @@
     [self.view layoutIfNeeded];
 }
 
-- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView
+- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView tokenIndex:(NSInteger)index
 {
-    NSLog(@"Double tap works!");
+    NSLog(@"Double tap works! @ Index: %li", (long)index);
 }
 
 

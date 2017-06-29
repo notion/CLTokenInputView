@@ -76,7 +76,7 @@ NS_ASSUME_NONNULL_BEGIN
  * if you need to take an action on a selected token
  */
 
-- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView;
+- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView tokenIndex:(NSInteger)index;
 
 @end
 
