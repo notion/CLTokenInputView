@@ -59,4 +59,12 @@
     [super setDelegate:delegate];
 }
 
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
+    if((action == @selector(copy:) ||
+        action == @selector(cut:))) {
+        return YES;
+    }
+    return NO;
+}
+
 @end
