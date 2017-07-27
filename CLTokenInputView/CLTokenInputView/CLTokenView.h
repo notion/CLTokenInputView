@@ -28,6 +28,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (assign, nonatomic) BOOL selected;
 @property (assign, nonatomic) BOOL hideUnselectedComma;
 @property (nonatomic, strong) CLToken *token;
+@property (assign, nonatomic) BOOL shouldHide;
 
 - (id)initWithToken:(CLToken *)token font:(nullable UIFont *)font;
 

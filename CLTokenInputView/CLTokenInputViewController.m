@@ -102,6 +102,13 @@
     [self.selectedNames removeObject:name];
 }
 
+- (void)tokenInputView:(CLTokenInputView *)view didRemoveTokens:(NSArray<CLToken *> *)tokens {
+    for(CLToken *token in tokens) {
+        NSString *name = token.displayText;
+        [self.selectedNames removeObject:name];
+    }
+}
+
 - (CLToken *)tokenInputView:(CLTokenInputView *)view tokenForText:(NSString *)text
 {
     if (self.filteredNames.count > 0) {
