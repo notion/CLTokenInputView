@@ -488,13 +488,11 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 - (void)collapseTokenField {
     [self removeTokensForCollapse];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
-    self.isCollapsed = YES;
 }
 
 - (void)tokenFieldShouldExpand {
     [self addTokensToExpand];
     self.tokenViews.lastObject.hideUnselectedComma = NO;
-    self.isCollapsed = NO;
 }
 
 #pragma mark - CLTokenViewDelegate
