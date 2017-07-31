@@ -187,6 +187,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         NSString *placeholder = [NSString stringWithFormat:@"+%lu", (unsigned long)self.placeholderTokenArray.count];
         CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil];
         [self addToken:token];
+        
     }
 }
 
@@ -486,10 +487,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)collapseTokenField {
     [self removeTokensForCollapse];
+    self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
 
 - (void)tokenFieldShouldExpand {
     [self addTokensToExpand];
+    self.tokenViews.lastObject.hideUnselectedComma = NO;
 }
 
 #pragma mark - CLTokenViewDelegate
