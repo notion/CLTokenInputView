@@ -129,6 +129,12 @@
 
 - (void)tokenInputViewDidBeginEditing:(CLTokenInputView *)view
 {
+    if(view == self.tokenInputView) {
+        [self.secondTokenInputView collapseTokenField];
+    } else {
+        [self.tokenInputView collapseTokenField];
+    }
+    
     NSLog(@"token input view did begin editing: %@", view);
     view.accessoryView = [self contactAddButton];
     [self.view removeConstraint:self.tableViewTopLayoutConstraint];

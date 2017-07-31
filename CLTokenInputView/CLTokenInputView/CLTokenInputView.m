@@ -34,8 +34,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
 
-@property (assign, nonatomic) BOOL tokenSelected;
-
 @end
 
 @implementation CLTokenInputView
@@ -43,7 +41,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 - (void)commonInit
 {
     self.textField = [[CLBackspaceDetectingTextField alloc] initWithFrame:self.bounds];
-    self.textField.backgroundColor = [UIColor clearColor];
     self.textField.keyboardType = UIKeyboardTypeEmailAddress;
     self.textField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
@@ -400,7 +397,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
         [self.delegate tokenInputViewDidEndEditing:self];
     }
-    [self tokenFieldShouldCollapse];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
 
@@ -488,10 +484,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 #pragma mark - Collapse / Expand
 
-- (void)tokenFieldShouldCollapse {
-    if(!self.tokenSelected) {
-        [self removeTokensForCollapse];
-    }
+- (void)collapseTokenField {
+    [self removeTokensForCollapse];
 }
 
 - (void)tokenFieldShouldExpand {
@@ -525,6 +519,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated
 {
+    // We are treating a token selection as an input on the tokenField...so we should be alerting that the tokenfield
+    // did begin editing
+    if ([self.delegate respondsToSelector:@selector(tokenInputViewDidBeginEditing:)]) {
+        [self.delegate tokenInputViewDidBeginEditing:self];
+    }
+    
     if(tokenView.selected) {
         if([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:tokenIndex:)]) {
             NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
@@ -532,7 +532,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         }
     }
     
-    self.tokenSelected = YES;
     [tokenView setSelected:YES animated:animated];
     for (CLTokenView *otherTokenView in self.tokenViews) {
         if (otherTokenView != tokenView) {
@@ -548,7 +547,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     for (CLTokenView *tokenView in self.tokenViews) {
         [tokenView setSelected:NO animated:animated];
     }
-    self.tokenSelected = NO;
 }
 
 
@@ -674,6 +672,5 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         CGContextStrokePath(context);
     }
 }
-
 
 @end
