@@ -114,6 +114,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly, nonatomic, getter = isEditing) BOOL editing;
 @property (readonly, nonatomic) CGFloat textFieldDisplayOffset;
 @property (copy, nonatomic, nullable) NSString *text;
+@property (assign, nonatomic) BOOL isCollapsed;
 
 - (void)addToken:(CLToken *)token;
 - (void)removeToken:(CLToken *)token;
