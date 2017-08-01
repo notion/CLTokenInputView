@@ -10,12 +10,13 @@
 
 @implementation CLToken
 
-- (id)initWithDisplayText:(NSString *)displayText context:(NSObject *)context
+- (id)initWithDisplayText:(NSString *)displayText context:(NSObject *)context isPlaceholderToken:(BOOL)isPlaceHolderToken
 {
     self = [super init];
     if (self) {
         self.displayText = displayText;
         self.context = context;
+        self.isPlaceholderToken = isPlaceHolderToken;
     }
     return self;
 }

@@ -21,8 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 /** Used for storing anything that would be useful later on */
 @property (strong, nonatomic, nullable) NSObject *context;
 
+@property (assign, nonatomic) BOOL isPlaceholderToken;
 
-- (id)initWithDisplayText:(NSString *)displayText context:(nullable NSObject *)context;
+
+- (id)initWithDisplayText:(NSString *)displayText context:(NSObject *)context isPlaceholderToken:(BOOL)isPlaceHolderToken;
 
 @end
 

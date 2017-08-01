@@ -162,7 +162,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 }
 
 - (void)removeTokens {
-    if(self.tokens.count <= 1) {
+    if(self.tokens.count <= 1 || [self.tokens.lastObject isPlaceholderToken]) {
         return;
     }
     
@@ -185,7 +185,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     
     if(self.placeholderTokenArray.count > 0) {
         NSString *placeholder = [NSString stringWithFormat:@"+%lu", (unsigned long)self.placeholderTokenArray.count];
-        CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil];
+        CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil isPlaceholderToken:YES];
         [self addToken:token];
         
     }
