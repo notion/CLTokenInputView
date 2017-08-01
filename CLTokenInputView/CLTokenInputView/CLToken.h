@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (assign, nonatomic) BOOL isPlaceholderToken;
 
 
-- (id)initWithDisplayText:(NSString *)displayText context:(NSObject *)context isPlaceholderToken:(BOOL)isPlaceHolderToken;
+- (id)initWithDisplayText:(NSString *)displayText context:(nullable NSObject *)context;
 
 @end
 

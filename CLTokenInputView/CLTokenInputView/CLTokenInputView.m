@@ -185,7 +185,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     
     if(self.placeholderTokenArray.count > 0) {
         NSString *placeholder = [NSString stringWithFormat:@"+%lu", (unsigned long)self.placeholderTokenArray.count];
-        CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil isPlaceholderToken:YES];
+        CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil];
+        token.isPlaceholderToken = YES;
         [self addToken:token];
         
     }
