@@ -34,6 +34,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
 
+@property (assign, nonatomic) BOOL  hasExpanded;
+
 @end
 
 @implementation CLTokenInputView
@@ -487,13 +489,19 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 #pragma mark - Collapse / Expand
 
 - (void)collapseTokenField {
-    [self removeTokensForCollapse];
-    self.tokenViews.lastObject.hideUnselectedComma = YES;
+    if(self.hasExpanded) {
+        [self removeTokensForCollapse];
+        self.tokenViews.lastObject.hideUnselectedComma = YES;
+        self.hasExpanded = false;
+    }
 }
 
 - (void)tokenFieldShouldExpand {
-    [self addTokensToExpand];
-    self.tokenViews.lastObject.hideUnselectedComma = NO;
+    if(!self.hasExpanded) {
+        [self addTokensToExpand];
+        self.tokenViews.lastObject.hideUnselectedComma = NO;
+        self.hasExpanded = true;
+    }
 }
 
 #pragma mark - CLTokenViewDelegate
