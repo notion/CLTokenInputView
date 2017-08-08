@@ -34,6 +34,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
 @property (assign, nonatomic) BOOL didRequestSelection;
+@property (assign, nonatomic) BOOL didRequestDeletion;
 
 @end
 
@@ -206,6 +207,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputView:didRemoveToken:)]) {
         [self.delegate tokenInputView:self didRemoveToken:removedToken];
     }
+    self.didRequestDeletion = NO;
     [self updatePlaceholderTextVisibility];
     [self repositionViews];
 }
@@ -502,6 +504,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)tokenViewDidRequestDelete:(CLTokenView *)tokenView replaceWithText:(NSString *)replacementText
 {
+    self.didRequestDeletion = YES;
+    
     // First, refocus the text field
     [self.textField becomeFirstResponder];
     if (replacementText.length > 0) {
@@ -526,9 +530,13 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 }
 
 - (void)tokenViewDidResignFirstResponder {
-    if(!self.textField.isFirstResponder && !self.didRequestSelection) {
+    //This checks the following:
+    // 1) Our textfield isn't currently the first responder (i.e typing in new tokens)
+    // 2) The user hasn't requested to select another token (in the same CLTokenInputView)
+    // 3) Finally, that the user hasn't requested to delete a token (via backspace etc.)
+    if(!self.textField.isFirstResponder && !self.didRequestSelection
+                                        && !self.didRequestDeletion) {
         [self collapseTokenField];
-        self.didRequestSelection = NO;
     }
 }
 
