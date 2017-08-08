@@ -266,6 +266,7 @@ static NSString *const UNSELECTED_LABEL_NO_COMMA_FORMAT = @"%@";
 {
     BOOL didResignFirstResponder = [super resignFirstResponder];
     [self setSelected:NO animated:NO];
+    [self.delegate tokenViewDidResignFirstResponder];
     return didResignFirstResponder;
 }
 

@@ -33,6 +33,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
+@property (assign, nonatomic) BOOL didRequestSelection;
 
 @end
 
@@ -399,6 +400,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
         [self.delegate tokenInputViewDidEndEditing:self];
     }
+    [self collapseTokenField];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
 
@@ -515,7 +517,15 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)tokenViewDidRequestSelection:(CLTokenView *)tokenView
 {
+    self.didRequestSelection = YES;
     [self selectTokenView:tokenView animated:YES];
+}
+
+- (void)tokenViewDidResignFirstResponder {
+    if(!self.textField.isFirstResponder && !self.didRequestSelection) {
+        [self collapseTokenField];
+    }
+    self.didRequestSelection = NO;
 }
 
 
