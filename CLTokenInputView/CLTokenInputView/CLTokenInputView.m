@@ -521,11 +521,15 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     [self selectTokenView:tokenView animated:YES];
 }
 
+- (void)tokenViewDidBecomeFirstResponder {
+    self.didRequestSelection = NO;
+}
+
 - (void)tokenViewDidResignFirstResponder {
     if(!self.textField.isFirstResponder && !self.didRequestSelection) {
         [self collapseTokenField];
+        self.didRequestSelection = NO;
     }
-    self.didRequestSelection = NO;
 }
 
 
