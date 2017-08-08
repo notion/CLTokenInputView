@@ -402,6 +402,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
         [self.delegate tokenInputViewDidEndEditing:self];
     }
+    [self tokenizeTextfieldText];
     [self collapseTokenField];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
