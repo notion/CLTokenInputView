@@ -496,10 +496,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 - (void)collapseTokenField {
     [self removeTokensForCollapse];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
-    
-    if([self.delegate respondsToSelector:@selector(tokenInputViewDidResignFirstResponder:)]) {
-        [self.delegate tokenInputViewDidResignFirstResponder:self];
-    }
 }
 
 - (void)tokenFieldShouldExpand {
@@ -544,6 +540,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if(!self.textField.isFirstResponder && !self.didRequestSelection
                                         && !self.didRequestDeletion) {
         [self collapseTokenField];
+        
+        if([self.delegate respondsToSelector:@selector(tokenInputViewDidResignFirstResponder:)]) {
+            [self.delegate tokenInputViewDidResignFirstResponder:self];
+        }
     }
 }
 
