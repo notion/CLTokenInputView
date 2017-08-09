@@ -143,8 +143,11 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         return ;
     }
     
-    //Remove '+' token
-    [self removeToken:[self.tokens lastObject]];
+    CLToken *placeholderToken = [self.tokens lastObject];
+    if(placeholderToken.isPlaceholderToken) {
+        //Remove '+' token
+        [self removeToken:[self.tokens lastObject]];
+    }
     
     //Add back the tokens in our placeholder array
     for(CLToken *token in self.placeholderTokenArray) {
@@ -402,7 +405,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
         [self.delegate tokenInputViewDidEndEditing:self];
     }
-    [self collapseTokenField];
+    [self tokenViewDidResignFirstResponder];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
 
@@ -493,6 +496,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 - (void)collapseTokenField {
     [self removeTokensForCollapse];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
+    
+    if([self.delegate respondsToSelector:@selector(tokenInputViewDidResignFirstResponder:)]) {
+        [self.delegate tokenInputViewDidResignFirstResponder:self];
+    }
 }
 
 - (void)tokenFieldShouldExpand {
