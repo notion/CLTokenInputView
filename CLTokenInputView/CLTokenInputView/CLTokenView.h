@@ -18,7 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 @required
 - (void)tokenViewDidRequestDelete:(CLTokenView *)tokenView replaceWithText:(nullable NSString *)replacementText;
 - (void)tokenViewDidRequestSelection:(CLTokenView *)tokenView;
-
+- (void)tokenViewDidBecomeFirstResponder;
+- (void)tokenViewDidResignFirstResponder;
 @end
 
 
@@ -28,6 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (assign, nonatomic) BOOL selected;
 @property (assign, nonatomic) BOOL hideUnselectedComma;
 @property (nonatomic, strong) CLToken *token;
+@property (assign, nonatomic) BOOL shouldHide;
 
 - (id)initWithToken:(CLToken *)token font:(nullable UIFont *)font;
 

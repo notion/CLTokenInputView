@@ -33,12 +33,18 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  Called when the text field begins editing
  */
-- (void)tokenInputViewDidEndEditing:(CLTokenInputView *)view;
+- (void)tokenInputViewDidBeginEditing:(CLTokenInputView *)view;
 
 /**
  *  Called when the text field ends editing
  */
-- (void)tokenInputViewDidBeginEditing:(CLTokenInputView *)view;
+- (void)tokenInputViewDidEndEditing:(CLTokenInputView *)view;
+
+/**
+ *  Called when the tokenView completely resigns first responder
+ */
+- (void)tokenInputViewDidResignFirstResponder:(CLTokenInputView *)view;
+
 
 /**
  * Called when the text field should return
@@ -57,6 +63,11 @@ NS_ASSUME_NONNULL_BEGIN
  * Called when a token has been removed. You should use this opportunity to update your local list of selected items.
  */
 - (void)tokenInputView:(CLTokenInputView *)view didRemoveToken:(CLToken *)token;
+/**
+ * Called when multiple tokens have been removed. You should use this opportunity to update your local list of selected items.
+ */
+- (void)tokenInputView:(CLTokenInputView *)view didRemoveTokens:(NSArray<CLToken *> *)tokens;
+
 /** 
  * Called when the user attempts to press the Return key with text partially typed.
  * @return A CLToken for a match (typically the first item in the matching results),
@@ -117,6 +128,9 @@ NS_ASSUME_NONNULL_BEGIN
 // Editing
 - (void)beginEditing;
 - (void)endEditing;
+
+// Collapse Tokens
+- (void)collapseTokenField;
 
 @end
 

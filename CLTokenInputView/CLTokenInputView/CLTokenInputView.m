@@ -26,13 +26,15 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @interface CLTokenInputView () <CLBackspaceDetectingTextFieldDelegate, CLTokenViewDelegate>
 
 @property (strong, nonatomic) CL_GENERIC_MUTABLE_ARRAY(CLToken *) *tokens;
+@property (strong, nonatomic) CL_GENERIC_MUTABLE_ARRAY(CLToken *) *placeholderTokenArray;
 @property (strong, nonatomic) CL_GENERIC_MUTABLE_ARRAY(CLTokenView *) *tokenViews;
 @property (strong, nonatomic) CLBackspaceDetectingTextField *textField;
 @property (strong, nonatomic) UILabel *fieldLabel;
 
-
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
+@property (assign, nonatomic) BOOL didRequestSelection;
+@property (assign, nonatomic) BOOL didRequestDeletion;
 
 @end
 
@@ -41,10 +43,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 - (void)commonInit
 {
     self.textField = [[CLBackspaceDetectingTextField alloc] initWithFrame:self.bounds];
-    self.textField.backgroundColor = [UIColor clearColor];
     self.textField.keyboardType = UIKeyboardTypeEmailAddress;
     self.textField.autocorrectionType = UITextAutocorrectionTypeNo;
     self.textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.textField.font = [UIFont fontWithName:@"HelveticaNeue" size:15.5];
     self.textField.delegate = self;
     self.additionalTextFieldYOffset = 0.0;
     if (![self.textField respondsToSelector:@selector(defaultTextAttributes)]) {
@@ -57,6 +59,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
     self.tokens = [NSMutableArray arrayWithCapacity:20];
     self.tokenViews = [NSMutableArray arrayWithCapacity:20];
+    self.placeholderTokenArray = [NSMutableArray arrayWithCapacity:20];
 
     self.fieldColor = [UIColor lightGrayColor]; 
     
@@ -135,6 +138,25 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     [self repositionViews];
 }
 
+- (void)addTokensToExpand {
+    if(self.placeholderTokenArray.count == 0) {
+        return ;
+    }
+    
+    CLToken *placeholderToken = [self.tokens lastObject];
+    if(placeholderToken.isPlaceholderToken) {
+        //Remove '+' token
+        [self removeToken:[self.tokens lastObject]];
+    }
+    
+    //Add back the tokens in our placeholder array
+    for(CLToken *token in self.placeholderTokenArray) {
+        [self addToken:token];
+    }
+    
+    [self.placeholderTokenArray removeAllObjects];
+}
+
 - (void)removeToken:(CLToken *)token
 {
     NSInteger index = [self.tokens indexOfObject:token];
@@ -142,6 +164,37 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         return;
     }
     [self removeTokenAtIndex:index];
+}
+
+- (void)removeTokens {
+    if(self.tokens.count <= 1 || [self.tokens.lastObject isPlaceholderToken]) {
+        return;
+    }
+    
+    for(CLTokenView *tokenView in self.tokenViews) {
+        if(tokenView.shouldHide == YES) {
+            [tokenView removeFromSuperview];
+        }
+    }
+    
+    NSRange range = NSMakeRange(1, self.tokens.count - 1);
+    NSArray<CLToken *> *tokens = [self.tokens subarrayWithRange:range];
+  
+    [self.placeholderTokenArray addObjectsFromArray:tokens];
+    [self.tokenViews removeObjectsInRange:range];
+    [self.tokens removeObjectsInRange:range];
+    
+    if([self.delegate respondsToSelector:@selector(tokenInputView:didRemoveTokens:)]) {
+        [self.delegate tokenInputView:self didRemoveTokens:tokens];
+    }
+    
+    if(self.placeholderTokenArray.count > 0) {
+        NSString *placeholder = [NSString stringWithFormat:@"+%lu", (unsigned long)self.placeholderTokenArray.count];
+        CLToken *token = [[CLToken alloc] initWithDisplayText:placeholder context:nil];
+        token.isPlaceholderToken = YES;
+        [self addToken:token];
+        
+    }
 }
 
 - (void)removeTokenAtIndex:(NSInteger)index
@@ -157,8 +210,21 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputView:didRemoveToken:)]) {
         [self.delegate tokenInputView:self didRemoveToken:removedToken];
     }
+    self.didRequestDeletion = NO;
     [self updatePlaceholderTextVisibility];
     [self repositionViews];
+}
+
+- (void)removeTokensForCollapse {
+    if(self.tokens.count <= 1) {
+        return;
+    }
+    
+    [self.tokenViews enumerateObjectsUsingBlock:^(CLTokenView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        obj.shouldHide = idx == 0 ? NO : YES;
+    }];
+    
+    [self removeTokens];
 }
 
 - (NSArray *)allTokens
@@ -331,6 +397,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     }
     self.tokenViews.lastObject.hideUnselectedComma = NO;
     [self unselectAllTokenViewsAnimated:YES];
+    [self tokenFieldShouldExpand];
 }
 
 - (void)textFieldDidEndEditing:(UITextField *)textField
@@ -338,6 +405,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
         [self.delegate tokenInputViewDidEndEditing:self];
     }
+    [self tokenViewDidResignFirstResponder];
     self.tokenViews.lastObject.hideUnselectedComma = YES;
 }
 
@@ -412,7 +480,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 #pragma mark - Textfield text
 
-
 - (NSString *)text
 {
     return self.textField.text;
@@ -423,10 +490,25 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     self.textField.text = text;
 }
 
+
+#pragma mark - Collapse / Expand
+
+- (void)collapseTokenField {
+    [self removeTokensForCollapse];
+    self.tokenViews.lastObject.hideUnselectedComma = YES;
+}
+
+- (void)tokenFieldShouldExpand {
+    [self addTokensToExpand];
+    self.tokenViews.lastObject.hideUnselectedComma = NO;
+}
+
 #pragma mark - CLTokenViewDelegate
 
 - (void)tokenViewDidRequestDelete:(CLTokenView *)tokenView replaceWithText:(NSString *)replacementText
 {
+    self.didRequestDeletion = YES;
+    
     // First, refocus the text field
     [self.textField becomeFirstResponder];
     if (replacementText.length > 0) {
@@ -442,7 +524,27 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)tokenViewDidRequestSelection:(CLTokenView *)tokenView
 {
+    self.didRequestSelection = YES;
     [self selectTokenView:tokenView animated:YES];
+}
+
+- (void)tokenViewDidBecomeFirstResponder {
+    self.didRequestSelection = NO;
+}
+
+- (void)tokenViewDidResignFirstResponder {
+    //This checks the following:
+    // 1) Our textfield isn't currently the first responder (i.e typing in new tokens)
+    // 2) The user hasn't requested to select another token (in the same CLTokenInputView)
+    // 3) Finally, that the user hasn't requested to delete a token (via backspace etc.)
+    if(!self.textField.isFirstResponder && !self.didRequestSelection
+                                        && !self.didRequestDeletion) {
+        [self collapseTokenField];
+        
+        if([self.delegate respondsToSelector:@selector(tokenInputViewDidResignFirstResponder:)]) {
+            [self.delegate tokenInputViewDidResignFirstResponder:self];
+        }
+    }
 }
 
 
@@ -450,6 +552,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated
 {
+    // We are treating a token selection as an input on the tokenField...so we should be alerting that the tokenfield
+    // did begin editing
+    if ([self.delegate respondsToSelector:@selector(tokenInputViewDidBeginEditing:)]) {
+        [self.delegate tokenInputViewDidBeginEditing:self];
+    }
+    
     if(tokenView.selected) {
         if([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:tokenIndex:)]) {
             NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
@@ -463,6 +571,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
             [otherTokenView setSelected:NO animated:animated];
         }
     }
+    
+    [self tokenFieldShouldExpand];
 }
 
 - (void)unselectAllTokenViewsAnimated:(BOOL)animated

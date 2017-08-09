@@ -57,6 +57,11 @@
     self.secondTokenInputView.fieldName = NSLocalizedString(@"Cc:", nil);
     self.secondTokenInputView.drawBottomBorder = YES;
     self.secondTokenInputView.delegate = self;
+    
+    self.thirdTokenInputView.fieldName = NSLocalizedString(@"Bcc:", nil);
+    self.thirdTokenInputView.drawBottomBorder = YES;
+    self.thirdTokenInputView.delegate = self;
+
     [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:@"Cell"];
 }
 
@@ -100,6 +105,13 @@
 {
     NSString *name = token.displayText;
     [self.selectedNames removeObject:name];
+}
+
+- (void)tokenInputView:(CLTokenInputView *)view didRemoveTokens:(NSArray<CLToken *> *)tokens {
+    for(CLToken *token in tokens) {
+        NSString *name = token.displayText;
+        [self.selectedNames removeObject:name];
+    }
 }
 
 - (CLToken *)tokenInputView:(CLTokenInputView *)view tokenForText:(NSString *)text
@@ -170,6 +182,8 @@
     }
     else if(self.secondTokenInputView.isEditing){
         [self.secondTokenInputView addToken:token];
+    } else {
+        [self.thirdTokenInputView addToken:token];
     }
 }
 
