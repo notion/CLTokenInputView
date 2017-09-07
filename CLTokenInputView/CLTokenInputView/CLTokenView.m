@@ -27,6 +27,9 @@ static NSString *const UNSELECTED_LABEL_NO_COMMA_FORMAT = @"%@";
 
 @property (copy, nonatomic) NSString *displayText;
 
+@property (assign, nonatomic) BOOL isBecomingFirstResponder;
+@property (assign, nonatomic) BOOL isRemovingFromSuperview;
+
 @end
 
 @implementation CLTokenView
@@ -215,14 +218,15 @@ static NSString *const UNSELECTED_LABEL_NO_COMMA_FORMAT = @"%@";
     self.label.frame = labelFrame;
 }
 
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect
-{
-    // Drawing code
+- (void)removeFromSuperview {
+    self.isRemovingFromSuperview = YES;
+    [super removeFromSuperview];
 }
-*/
+
+- (void)willMoveToSuperview:(UIView *)newSuperview {
+    [super willMoveToSuperview:newSuperview];
+    self.isRemovingFromSuperview = NO;
+}
 
 
 #pragma mark - UIKeyInput protocol
@@ -255,23 +259,26 @@ static NSString *const UNSELECTED_LABEL_NO_COMMA_FORMAT = @"%@";
 
 #pragma mark - First Responder (needed to capture keyboard)
 
--(BOOL)canBecomeFirstResponder
-{
+- (BOOL)canBecomeFirstResponder {
     return YES;
 }
 
-
--(BOOL)resignFirstResponder
-{
+- (BOOL)resignFirstResponder {
     BOOL didResignFirstResponder = [super resignFirstResponder];
     [self setSelected:NO animated:NO];
+    // If the token view is resigning first responder as a result of getting removed from its
+    // superview, don't fire this method (it will cause the collapse of tokens)
+    if (!self.isRemovingFromSuperview) {
+        [self.delegate tokenViewDidResignFirstResponder:self];
+    }
     return didResignFirstResponder;
 }
 
--(BOOL)becomeFirstResponder
-{
+- (BOOL)becomeFirstResponder {
+    self.isBecomingFirstResponder = YES;
     BOOL didBecomeFirstResponder = [super becomeFirstResponder];
     [self setSelected:YES animated:NO];
+    self.isBecomingFirstResponder = NO;
     return didBecomeFirstResponder;
 }
 
