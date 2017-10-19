@@ -12,6 +12,7 @@
 #import "CLTokenView.h"
 
 static CGFloat const HSPACE = 0.0;
+static CGFloat const ACCESSORY_VIEW_HSPACE = 4.0;
 static CGFloat const TEXT_FIELD_HSPACE = 4.0; // Note: Same as CLTokenView.PADDING_X
 static CGFloat const VSPACE = 4.0;
 static CGFloat const MINIMUM_TEXTFIELD_WIDTH = 56.0;
@@ -35,6 +36,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
 @property (assign, nonatomic) BOOL collapsed;
+@property (assign, nonatomic) BOOL textFieldWillBeginEditing;
 
 @end
 
@@ -44,6 +46,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 {
     self.collapsible = NO;
     self.collapsed = NO;
+    self.textFieldWillBeginEditing = NO;
+    self.bottomBorderPadding = 0.0;
     
     self.textField = [[CLBackspaceDetectingTextField alloc] initWithFrame:self.bounds];
     self.textField.backgroundColor = [UIColor clearColor];
@@ -66,7 +70,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     self.fieldColor = [UIColor lightGrayColor]; 
     
     self.fieldLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    // NOTE: Explicitly not setting a font for the field label
     self.fieldLabel.textColor = self.fieldColor;
     [self addSubview:self.fieldLabel];
     self.fieldLabel.hidden = YES;
@@ -231,13 +234,13 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         curX = CGRectGetMaxX(fieldLabelRect) + FIELD_MARGIN_X;
     }
 
-    // Position accessory view (if set)
+    // Account for accessory view width (if set)
     if (self.accessoryView) {
         CGRect accessoryRect = self.accessoryView.frame;
-        accessoryRect.origin.x = CGRectGetWidth(bounds) - PADDING_RIGHT - CGRectGetWidth(accessoryRect);
+        accessoryRect.origin.x = CGRectGetWidth(bounds) - PADDING_RIGHT - CGRectGetWidth(accessoryRect) - ACCESSORY_VIEW_HSPACE;
         accessoryRect.origin.y = curY;
         self.accessoryView.frame = accessoryRect;
-
+        
         firstLineRightBoundary = CGRectGetMinX(accessoryRect) - HSPACE;
     }
 
@@ -275,17 +278,17 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     }
     
     if (exceedsFirstLine) {
+        self.collapsedCountLabel.text = [NSString stringWithFormat:@"+%lu", remainingTokens];
+        [self.collapsedCountLabel sizeToFit];
+
         if (!self.accessoryView) {
             // Set the accessory view and run this method again so it gets laid out properly.
-            self.collapsedCountLabel.text = [NSString stringWithFormat:@"+%lu", remainingTokens];
-            [self.collapsedCountLabel sizeToFit];
-
             self.accessoryView = self.collapsedCountLabel;
             [self repositionViews];
             return;
         } else {
             CGRect accessoryRect = self.accessoryView.frame;
-            accessoryRect.origin.x = curX;
+            accessoryRect.origin.x = curX + ACCESSORY_VIEW_HSPACE;
             accessoryRect.origin.y = curY + 2.0;
             self.accessoryView.frame = accessoryRect;
             
@@ -367,8 +370,14 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 #pragma mark - UITextFieldDelegate
 
+- (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
+    self.textFieldWillBeginEditing = YES;
+    return YES;
+}
+
 - (void)textFieldDidBeginEditing:(UITextField *)textField
 {
+    self.textFieldWillBeginEditing = NO;
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidBeginEditing:)]) {
         [self.delegate tokenInputViewDidBeginEditing:self];
     }
@@ -381,16 +390,17 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     }
 }
 
-- (void)textFieldDidEndEditing:(UITextField *)textField
-{
-    if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
-        [self.delegate tokenInputViewDidEndEditing:self];
-    }
+- (void)textFieldDidEndEditing:(UITextField *)textField {
     self.tokenViews.lastObject.hideUnselectedComma = YES;
     
-    if (!self.isEditing && self.collapsible) {
-        self.collapsed = YES;
-        [self repositionViews];
+    if (!self.isEditing) {
+        if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
+            [self.delegate tokenInputViewDidEndEditing:self];
+        }
+        if(self.collapsible) {
+            self.collapsed = YES;
+            [self repositionViews];
+        }
     }
 }
 
@@ -504,9 +514,14 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 }
 
 - (void)tokenViewDidResignFirstResponder:(CLTokenView *)tokenView {
-    if (!self.isEditing && self.collapsible) {
-        self.collapsed = YES;
-        [self repositionViews];
+    if (!self.isEditing) {
+        if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
+            [self.delegate tokenInputViewDidEndEditing:self];
+        }
+        if (self.collapsible) {
+            self.collapsed = YES;
+            [self repositionViews];
+        }
     }
 }
 
@@ -544,7 +559,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         }
     }];
     
-    return tokenIsFirstResponder || self.textField.isFirstResponder;
+    return tokenIsFirstResponder || self.textField.isFirstResponder || self.textFieldWillBeginEditing;
 }
 
 - (void)beginEditing {
@@ -652,11 +667,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGRect bounds = self.bounds;
-        CGContextSetStrokeColorWithColor(context, [UIColor lightGrayColor].CGColor);
+        UIColor *borderColor = [UIColor colorWithRed:190.0/255.0 green:190.0/255.0 blue:198.0/255.0 alpha:1.0];
+        CGContextSetStrokeColorWithColor(context, borderColor.CGColor);
         CGContextSetLineWidth(context, 0.5);
 
-        CGContextMoveToPoint(context, 0, bounds.size.height);
-        CGContextAddLineToPoint(context, CGRectGetWidth(bounds), bounds.size.height);
+        CGContextMoveToPoint(context, _bottomBorderPadding, bounds.size.height-0.5);
+        CGContextAddLineToPoint(context, CGRectGetWidth(bounds) - _bottomBorderPadding, bounds.size.height-0.5);
         CGContextStrokePath(context);
     }
 }
