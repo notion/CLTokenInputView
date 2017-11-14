@@ -671,8 +671,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         CGContextSetStrokeColorWithColor(context, borderColor.CGColor);
         CGContextSetLineWidth(context, 0.5);
 
-        CGContextMoveToPoint(context, _bottomBorderPadding, bounds.size.height-0.5);
-        CGContextAddLineToPoint(context, CGRectGetWidth(bounds) - _bottomBorderPadding, bounds.size.height-0.5);
+        CGContextMoveToPoint(context, _bottomBorderPadding, bounds.size.height-1.0);
+        CGContextAddLineToPoint(context, CGRectGetWidth(bounds) - _bottomBorderPadding, bounds.size.height-1.0);
         CGContextStrokePath(context);
     }
 }
