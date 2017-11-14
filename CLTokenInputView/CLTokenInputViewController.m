@@ -122,13 +122,17 @@
 
 - (void)tokenInputViewDidBeginEditing:(CLTokenInputView *)view
 {
-    
     NSLog(@"token input view did begin editing: %@", view);
     view.accessoryView = [self contactAddButton];
     [self.view removeConstraint:self.tableViewTopLayoutConstraint];
     self.tableViewTopLayoutConstraint = [NSLayoutConstraint constraintWithItem:self.tableView attribute:NSLayoutAttributeTop relatedBy:NSLayoutRelationEqual toItem:view attribute:NSLayoutAttributeBottom multiplier:1.0 constant:0];
     [self.view addConstraint:self.tableViewTopLayoutConstraint];
     [self.view layoutIfNeeded];
+}
+
+- (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView tokenIndex:(NSInteger)index
+{
+    NSLog(@"Double tap works! @ Index: %li", (long)index);
 }
 
 
