@@ -104,6 +104,10 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (copy, nonatomic) CL_GENERIC_SET(NSString *) *tokenizationCharacters;
 @property (assign, nonatomic) IBInspectable BOOL drawBottomBorder;
+@property (assign, nonatomic) CGFloat bottomBorderPadding;
+
+/** Tokens will collapse into one line when first responder is lost */
+@property (assign, nonatomic) BOOL collapsible;
 
 @property (readonly, nonatomic) CL_GENERIC_ARRAY(CLToken *) *allTokens;
 @property (readonly, nonatomic, getter = isEditing) BOOL editing;

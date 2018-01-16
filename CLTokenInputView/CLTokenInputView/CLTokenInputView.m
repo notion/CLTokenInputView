@@ -12,6 +12,7 @@
 #import "CLTokenView.h"
 
 static CGFloat const HSPACE = 0.0;
+static CGFloat const ACCESSORY_VIEW_HSPACE = 4.0;
 static CGFloat const TEXT_FIELD_HSPACE = 4.0; // Note: Same as CLTokenView.PADDING_X
 static CGFloat const VSPACE = 4.0;
 static CGFloat const MINIMUM_TEXTFIELD_WIDTH = 56.0;
@@ -29,10 +30,13 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 @property (strong, nonatomic) CL_GENERIC_MUTABLE_ARRAY(CLTokenView *) *tokenViews;
 @property (strong, nonatomic) CLBackspaceDetectingTextField *textField;
 @property (strong, nonatomic) UILabel *fieldLabel;
+@property (strong, nonatomic) UILabel *collapsedCountLabel;
 
 
 @property (assign, nonatomic) CGFloat intrinsicContentHeight;
 @property (assign, nonatomic) CGFloat additionalTextFieldYOffset;
+@property (assign, nonatomic) BOOL collapsed;
+@property (assign, nonatomic) BOOL textFieldWillBeginEditing;
 
 @end
 
@@ -40,6 +44,11 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)commonInit
 {
+    self.collapsible = NO;
+    self.collapsed = NO;
+    self.textFieldWillBeginEditing = NO;
+    self.bottomBorderPadding = 0.0;
+    
     self.textField = [[CLBackspaceDetectingTextField alloc] initWithFrame:self.bounds];
     self.textField.backgroundColor = [UIColor clearColor];
     self.textField.keyboardType = UIKeyboardTypeEmailAddress;
@@ -61,13 +70,16 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     self.fieldColor = [UIColor lightGrayColor]; 
     
     self.fieldLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    // NOTE: Explicitly not setting a font for the field label
     self.fieldLabel.textColor = self.fieldColor;
     [self addSubview:self.fieldLabel];
     self.fieldLabel.hidden = YES;
 
     self.intrinsicContentHeight = STANDARD_ROW_HEIGHT;
     [self repositionViews];
+    
+    UITapGestureRecognizer *gestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                                        action:@selector(beginEditing)];
+    [self addGestureRecognizer:gestureRecognizer];
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -187,6 +199,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)repositionViews
 {
+    [self.tokenViews enumerateObjectsUsingBlock:^(CLTokenView * _Nonnull tokenView, NSUInteger idx, BOOL * _Nonnull stop) {
+        [tokenView removeFromSuperview];
+    }];
+    
     CGRect bounds = self.bounds;
     CGFloat rightBoundary = CGRectGetWidth(bounds) - PADDING_RIGHT;
     CGFloat firstLineRightBoundary = rightBoundary;
@@ -218,29 +234,40 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         curX = CGRectGetMaxX(fieldLabelRect) + FIELD_MARGIN_X;
     }
 
-    // Position accessory view (if set)
+    // Account for accessory view width (if set)
     if (self.accessoryView) {
         CGRect accessoryRect = self.accessoryView.frame;
-        accessoryRect.origin.x = CGRectGetWidth(bounds) - PADDING_RIGHT - CGRectGetWidth(accessoryRect);
+        accessoryRect.origin.x = CGRectGetWidth(bounds) - PADDING_RIGHT - CGRectGetWidth(accessoryRect) - ACCESSORY_VIEW_HSPACE;
         accessoryRect.origin.y = curY;
         self.accessoryView.frame = accessoryRect;
-
+        
         firstLineRightBoundary = CGRectGetMinX(accessoryRect) - HSPACE;
     }
 
     // Position token views
     CGRect tokenRect = CGRectNull;
-    for (UIView *tokenView in self.tokenViews) {
+    BOOL exceedsFirstLine = NO;
+    NSInteger remainingTokens = 0;
+    
+    for (CLTokenView *tokenView in self.tokenViews) {
         tokenRect = tokenView.frame;
 
         CGFloat tokenBoundary = isOnFirstLine ? firstLineRightBoundary : rightBoundary;
         if (curX + CGRectGetWidth(tokenRect) > tokenBoundary) {
-            // Need a new line
-            curX = PADDING_LEFT;
-            curY += STANDARD_ROW_HEIGHT+VSPACE;
-            totalHeight += STANDARD_ROW_HEIGHT;
-            isOnFirstLine = NO;
+            if (self.collapsed) {
+                remainingTokens = self.tokenViews.count - [self.tokenViews indexOfObject:tokenView];
+                exceedsFirstLine = YES;
+                break;
+            } else {
+                // Need a new line
+                curX = PADDING_LEFT;
+                curY += STANDARD_ROW_HEIGHT+VSPACE;
+                totalHeight += STANDARD_ROW_HEIGHT;
+                isOnFirstLine = NO;
+            }
         }
+        
+        [self addSubview:tokenView];
 
         tokenRect.origin.x = curX;
         // Center our tokenView vertically within STANDARD_ROW_HEIGHT
@@ -248,6 +275,30 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         tokenView.frame = tokenRect;
 
         curX = CGRectGetMaxX(tokenRect) + HSPACE;
+    }
+    
+    if (exceedsFirstLine) {
+        self.collapsedCountLabel.text = [NSString stringWithFormat:@"+%lu", remainingTokens];
+        [self.collapsedCountLabel sizeToFit];
+
+        if (!self.accessoryView) {
+            // Set the accessory view and run this method again so it gets laid out properly.
+            self.accessoryView = self.collapsedCountLabel;
+            [self repositionViews];
+            return;
+        } else {
+            CGRect accessoryRect = self.accessoryView.frame;
+            accessoryRect.origin.x = curX + ACCESSORY_VIEW_HSPACE;
+            accessoryRect.origin.y = curY + 2.0;
+            self.accessoryView.frame = accessoryRect;
+            
+            self.intrinsicContentHeight = STANDARD_ROW_HEIGHT;
+            [self invalidateIntrinsicContentSize];
+            [self setNeedsDisplay];
+            return;
+        }
+    } else {
+        self.accessoryView = nil;
     }
 
     // Always indent textfield by a little bit
@@ -307,38 +358,50 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)textFieldDidDeleteBackwards:(UITextField *)textField
 {
-    // Delay selecting the next token slightly, so that on iOS 8
-    // the deleteBackward on CLTokenView is not called immediately,
-    // causing a double-delete
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (textField.text.length == 0) {
-            CLTokenView *tokenView = self.tokenViews.lastObject;
-            if (tokenView) {
-                [self selectTokenView:tokenView animated:YES];
-                [self.textField resignFirstResponder];
-            }
+    if (textField.text.length == 0) {
+        CLTokenView *tokenView = self.tokenViews.lastObject;
+        if (tokenView) {
+            [self selectTokenView:tokenView animated:YES];
+            [self.textField resignFirstResponder];
         }
-    });
+    }
 }
 
 
 #pragma mark - UITextFieldDelegate
 
+- (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
+    self.textFieldWillBeginEditing = YES;
+    return YES;
+}
+
 - (void)textFieldDidBeginEditing:(UITextField *)textField
 {
+    self.textFieldWillBeginEditing = NO;
     if ([self.delegate respondsToSelector:@selector(tokenInputViewDidBeginEditing:)]) {
         [self.delegate tokenInputViewDidBeginEditing:self];
     }
     self.tokenViews.lastObject.hideUnselectedComma = NO;
     [self unselectAllTokenViewsAnimated:YES];
+    
+    if (self.collapsible) {
+        self.collapsed = NO;
+        [self repositionViews];
+    }
 }
 
-- (void)textFieldDidEndEditing:(UITextField *)textField
-{
-    if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
-        [self.delegate tokenInputViewDidEndEditing:self];
-    }
+- (void)textFieldDidEndEditing:(UITextField *)textField {
     self.tokenViews.lastObject.hideUnselectedComma = YES;
+    
+    if (!self.isEditing) {
+        if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
+            [self.delegate tokenInputViewDidEndEditing:self];
+        }
+        if(self.collapsible) {
+            self.collapsed = YES;
+            [self repositionViews];
+        }
+    }
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
@@ -355,7 +418,12 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         shouldChangeCharactersInRange:(NSRange)range
                     replacementString:(NSString *)string
 {
-    if (string.length > 0 && [self.tokenizationCharacters member:string]) {
+    // Fix GBoard bug when pressing return key.
+    NSRange r = [string rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]
+                                        options:NSBackwardsSearch];
+    BOOL isWhitespaceOrNewline = r.location != NSNotFound;
+
+    if ((string.length > 0 && [self.tokenizationCharacters member:string]) || isWhitespaceOrNewline) {
         [self tokenizeTextfieldText];
         // Never allow the change if it matches at token
         return NO;
@@ -445,11 +513,27 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     [self selectTokenView:tokenView animated:YES];
 }
 
+- (void)tokenViewDidResignFirstResponder:(CLTokenView *)tokenView {
+    if (!self.isEditing) {
+        if ([self.delegate respondsToSelector:@selector(tokenInputViewDidEndEditing:)]) {
+            [self.delegate tokenInputViewDidEndEditing:self];
+        }
+        if (self.collapsible) {
+            self.collapsed = YES;
+            [self repositionViews];
+        }
+    }
+}
+
 
 #pragma mark - Token selection
 
-- (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated
-{
+- (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated {
+    if (self.collapsed) {
+        [self beginEditing];
+        return;
+    }
+
     if(tokenView.selected) {
         if([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:tokenIndex:)]) {
             NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
@@ -465,8 +549,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     }
 }
 
-- (void)unselectAllTokenViewsAnimated:(BOOL)animated
-{
+- (void)unselectAllTokenViewsAnimated:(BOOL)animated {
     for (CLTokenView *tokenView in self.tokenViews) {
         [tokenView setSelected:NO animated:animated];
     }
@@ -475,21 +558,26 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 #pragma mark - Editing
 
-- (BOOL)isEditing
-{
-    return self.textField.editing;
+- (BOOL)isEditing {
+    __block BOOL tokenIsFirstResponder = NO;
+    [self.tokenViews enumerateObjectsUsingBlock:^(CLTokenView * _Nonnull tokenView, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (tokenView.isFirstResponder || tokenView.isBecomingFirstResponder) {
+            tokenIsFirstResponder = YES;
+            *stop = YES;
+        }
+    }];
+    
+    return tokenIsFirstResponder || self.textField.isFirstResponder || self.textFieldWillBeginEditing;
 }
 
-
-- (void)beginEditing
-{
+- (void)beginEditing {
     [self.textField becomeFirstResponder];
     [self unselectAllTokenViewsAnimated:NO];
+    self.collapsed = NO;
+    [self repositionViews];
 }
 
-
-- (void)endEditing
-{
+- (void)endEditing {
     // NOTE: We used to check if .isFirstResponder
     // and then resign first responder, but sometimes
     // we noticed that it would be the first responder,
@@ -587,12 +675,30 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGRect bounds = self.bounds;
-        CGContextSetStrokeColorWithColor(context, [UIColor lightGrayColor].CGColor);
+        UIColor *borderColor = [UIColor colorWithRed:190.0/255.0 green:190.0/255.0 blue:198.0/255.0 alpha:1.0];
+        CGContextSetStrokeColorWithColor(context, borderColor.CGColor);
         CGContextSetLineWidth(context, 0.5);
 
-        CGContextMoveToPoint(context, 0, bounds.size.height);
-        CGContextAddLineToPoint(context, CGRectGetWidth(bounds), bounds.size.height);
+        CGContextMoveToPoint(context, _bottomBorderPadding, bounds.size.height-1.0);
+        CGContextAddLineToPoint(context, CGRectGetWidth(bounds) - _bottomBorderPadding, bounds.size.height-1.0);
         CGContextStrokePath(context);
+    }
+}
+
+#pragma mark - Collapsing
+
+- (void)setCollapsible:(BOOL)collapsible {
+    _collapsible = collapsible;
+    if (collapsible) {
+        UILabel *label = [[UILabel alloc] init];
+        label.font = [UIFont boldSystemFontOfSize:17.0];
+        label.textColor = self.tintColor;
+        self.collapsedCountLabel = label;
+    } else {
+        if (self.collapsedCountLabel != nil) {
+            [self.collapsedCountLabel removeFromSuperview];
+            self.collapsedCountLabel = nil;
+        }
     }
 }
 
