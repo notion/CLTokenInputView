@@ -1,5 +1,5 @@
 #
-#  Be sure to run `pod spec lint CLTokenInputView.podspec' to ensure this is a
+#  Be sure to run `pod spec lint CLTokenInputView.podspec --allow-warnings --verbose --sources='https://github.com/LiftMe/cocoapod-specs.git,https://github.com/CocoaPods/Specs.git'` to ensure this is a
 #  valid spec and to remove all comments including this before submitting the spec.
 #
 #  To learn more about Podspec attributes see http://docs.cocoapods.org/specification.html
@@ -84,7 +84,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "https://github.com/ClusterInc/CLTokenInputView.git", :tag => s.version.to_s }
+  s.source       = { :git => "https://github.com/notion/CLTokenInputView.git", :tag => s.version.to_s }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
