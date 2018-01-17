@@ -358,13 +358,18 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)textFieldDidDeleteBackwards:(UITextField *)textField
 {
-    if (textField.text.length == 0) {
-        CLTokenView *tokenView = self.tokenViews.lastObject;
-        if (tokenView) {
-            [self selectTokenView:tokenView animated:YES];
-            [self.textField resignFirstResponder];
+    // Delay selecting the next token slightly, so that on iOS 8
+    // the deleteBackward on CLTokenView is not called immediately,
+    // causing a double-delete
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (textField.text.length == 0) {
+            CLTokenView *tokenView = self.tokenViews.lastObject;
+            if (tokenView) {
+                [self selectTokenView:tokenView animated:YES];
+                [self.textField resignFirstResponder];
+            }
         }
-    }
+    });
 }
 
 
@@ -414,16 +419,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     return shouldDoDefaultBehavior;
 }
 
-- (BOOL)                    textField:(UITextField *)textField
-        shouldChangeCharactersInRange:(NSRange)range
-                    replacementString:(NSString *)string
-{
-    // Fix GBoard bug when pressing return key.
-    NSRange r = [string rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]
-                                        options:NSBackwardsSearch];
-    BOOL isWhitespaceOrNewline = r.location != NSNotFound;
-
-    if ((string.length > 0 && [self.tokenizationCharacters member:string]) || isWhitespaceOrNewline) {
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+    if (string.length > 0 && [self.tokenizationCharacters member:string]) {
         [self tokenizeTextfieldText];
         // Never allow the change if it matches at token
         return NO;
