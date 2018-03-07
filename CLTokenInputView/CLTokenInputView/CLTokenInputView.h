@@ -134,7 +134,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (assign, nonatomic) BOOL collapsible;
 
 /**
- If true, the user will be able to add and remove tokens
+ If true, the user will be able to add and remove tokens. If false, it's basically a collapsed,
+ read-only view, and you can use tokenInputView:didTapTokenView:tokenIndex: to interact with it.
  */
 @property (assign, nonatomic) BOOL editable;
 
