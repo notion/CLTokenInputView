@@ -22,7 +22,7 @@ static CGFloat const PADDING_LEFT = 8.0;
 static CGFloat const PADDING_RIGHT = 16.0;
 static CGFloat const STANDARD_ROW_HEIGHT = 25.0;
 
-static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_X
+static CGFloat const FIELD_MARGIN_X = 2.0;
 
 @interface CLTokenInputView () <CLBackspaceDetectingTextFieldDelegate, CLTokenViewDelegate>
 
@@ -44,6 +44,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (void)commonInit
 {
+    self.paddingLeft = PADDING_LEFT;
+    self.paddingTop = PADDING_TOP;
+
+    self.editable = YES;
     self.collapsible = NO;
     self.collapsed = NO;
     self.textFieldWillBeginEditing = NO;
@@ -66,11 +70,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
     self.tokens = [NSMutableArray arrayWithCapacity:20];
     self.tokenViews = [NSMutableArray arrayWithCapacity:20];
-
-    self.fieldColor = [UIColor lightGrayColor]; 
     
     self.fieldLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    self.fieldLabel.textColor = self.fieldColor;
     [self addSubview:self.fieldLabel];
     self.fieldLabel.hidden = YES;
 
@@ -78,7 +79,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     [self repositionViews];
     
     UITapGestureRecognizer *gestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                        action:@selector(beginEditing)];
+                                                                                        action:@selector(didTapTokenInputView)];
     [self addGestureRecognizer:gestureRecognizer];
 }
 
@@ -114,6 +115,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     for (UIView *tokenView in self.tokenViews) {
         tokenView.tintColor = self.tintColor;
     }
+    self.collapsedCountLabel.textColor = self.tintColor;
 }
 
 
@@ -207,20 +209,10 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     CGFloat rightBoundary = CGRectGetWidth(bounds) - PADDING_RIGHT;
     CGFloat firstLineRightBoundary = rightBoundary;
 
-    CGFloat curX = PADDING_LEFT;
-    CGFloat curY = PADDING_TOP;
+    CGFloat curX = self.paddingLeft;
+    CGFloat curY = self.paddingTop;
     CGFloat totalHeight = STANDARD_ROW_HEIGHT;
     BOOL isOnFirstLine = YES;
-
-    // Position field view (if set)
-    if (self.fieldView) {
-        CGRect fieldViewRect = self.fieldView.frame;
-        fieldViewRect.origin.x = curX + FIELD_MARGIN_X;
-        fieldViewRect.origin.y = curY + ((STANDARD_ROW_HEIGHT - CGRectGetHeight(fieldViewRect))/2.0);
-        self.fieldView.frame = fieldViewRect;
-
-        curX = CGRectGetMaxX(fieldViewRect) + FIELD_MARGIN_X;
-    }
 
     // Position field label (if field name is set)
     if (!self.fieldLabel.hidden) {
@@ -250,6 +242,14 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     NSInteger remainingTokens = 0;
     
     for (CLTokenView *tokenView in self.tokenViews) {
+        if (self.shouldHideLastComma) {
+            if (tokenView == self.tokenViews.lastObject) {
+                tokenView.hideUnselectedComma = YES;
+            } else {
+                tokenView.hideUnselectedComma = NO;
+            }
+        }
+
         tokenRect = tokenView.frame;
 
         CGFloat tokenBoundary = isOnFirstLine ? firstLineRightBoundary : rightBoundary;
@@ -260,7 +260,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
                 break;
             } else {
                 // Need a new line
-                curX = PADDING_LEFT;
+                curX = self.paddingLeft;
                 curY += STANDARD_ROW_HEIGHT+VSPACE;
                 totalHeight += STANDARD_ROW_HEIGHT;
                 isOnFirstLine = NO;
@@ -279,6 +279,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     
     if (exceedsFirstLine) {
         self.collapsedCountLabel.text = [NSString stringWithFormat:@"+%lu", remainingTokens];
+        self.collapsedCountLabel.font = [UIFont boldSystemFontOfSize:self.fieldLabel.font.pointSize];
+        self.collapsedCountLabel.textColor = self.tintColor;
         [self.collapsedCountLabel sizeToFit];
 
         if (!self.accessoryView) {
@@ -289,7 +291,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         } else {
             CGRect accessoryRect = self.accessoryView.frame;
             accessoryRect.origin.x = curX + ACCESSORY_VIEW_HSPACE;
-            accessoryRect.origin.y = curY + 2.0;
+            accessoryRect.origin.y = curY + ((STANDARD_ROW_HEIGHT-CGRectGetHeight(accessoryRect))/2.0);
             self.accessoryView.frame = accessoryRect;
             
             self.intrinsicContentHeight = STANDARD_ROW_HEIGHT;
@@ -311,7 +313,7 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
         // isOnFirstLine will be useful, and this calculation is important.
         // So leaving it set here, and marking the warning to ignore it
 #pragma unused(isOnFirstLine)
-        curX = PADDING_LEFT + TEXT_FIELD_HSPACE;
+        curX = self.paddingLeft + TEXT_FIELD_HSPACE;
         curY += STANDARD_ROW_HEIGHT+VSPACE;
         totalHeight += STANDARD_ROW_HEIGHT;
         // Adjust the width
@@ -376,8 +378,13 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 #pragma mark - UITextFieldDelegate
 
 - (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
-    self.textFieldWillBeginEditing = YES;
-    return YES;
+    if (self.editable) {
+        self.textFieldWillBeginEditing = YES;
+        return YES;
+    } else {
+        [self didTapTokenInputView];
+        return NO;
+    }
 }
 
 - (void)textFieldDidBeginEditing:(UITextField *)textField
@@ -470,8 +477,8 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 - (CGFloat)textFieldDisplayOffset
 {
-    // Essentially the textfield's y with PADDING_TOP
-    return CGRectGetMinY(self.textField.frame) - PADDING_TOP;
+    // Essentially the textfield's y with `paddingTop`
+    return CGRectGetMinY(self.textField.frame) - self.paddingTop;
 }
 
 
@@ -526,22 +533,29 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 #pragma mark - Token selection
 
 - (void)selectTokenView:(CLTokenView *)tokenView animated:(BOOL)animated {
-    if (self.collapsed) {
-        [self beginEditing];
-        return;
-    }
-
-    if(tokenView.selected) {
-        if([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:tokenIndex:)]) {
-            NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
-            [self.delegate tokenInputView:self didDoubleTapTokenView:tokenView tokenIndex:index];
+    if (self.editable) {
+        if (self.collapsed) {
+            [self beginEditing];
+            return;
         }
-    }
-    
-    [tokenView setSelected:YES animated:animated];
-    for (CLTokenView *otherTokenView in self.tokenViews) {
-        if (otherTokenView != tokenView) {
-            [otherTokenView setSelected:NO animated:animated];
+
+        if (tokenView.selected) {
+            if ([self.delegate respondsToSelector:@selector(tokenInputView:didDoubleTapTokenView:tokenIndex:)]) {
+                NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
+                [self.delegate tokenInputView:self didDoubleTapTokenView:tokenView tokenIndex:index];
+            }
+        }
+
+        [tokenView setSelected:YES animated:animated];
+        for (CLTokenView *otherTokenView in self.tokenViews) {
+            if (otherTokenView != tokenView) {
+                [otherTokenView setSelected:NO animated:animated];
+            }
+        }
+    } else {
+        if ([self.delegate respondsToSelector:@selector(tokenInputView:didTapTokenView:tokenIndex:)]) {
+            NSInteger index =  [self.allTokens indexOfObject:tokenView.token];
+            [self.delegate tokenInputView:self didTapTokenView:tokenView tokenIndex:index];
         }
     }
 }
@@ -554,6 +568,13 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
 
 
 #pragma mark - Editing
+
+- (void)setEditable:(BOOL)editable {
+    _editable = editable;
+    if (!editable) {
+        self.collapsed = YES;
+    }
+}
 
 - (BOOL)isEditing {
     __block BOOL tokenIsFirstResponder = NO;
@@ -607,24 +628,6 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     if (oldFieldName == nil || ![oldFieldName isEqualToString:fieldName]) {
         [self repositionViews];
     }
-}
-
-- (void)setFieldColor:(UIColor *)fieldColor {
-    _fieldColor = fieldColor;
-    self.fieldLabel.textColor = _fieldColor;
-}
-
-- (void)setFieldView:(UIView *)fieldView
-{
-    if (_fieldView == fieldView) {
-        return;
-    }
-    [_fieldView removeFromSuperview];
-    _fieldView = fieldView;
-    if (_fieldView != nil) {
-        [self addSubview:_fieldView];
-    }
-    [self repositionViews];
 }
 
 - (void)setPlaceholderText:(NSString *)placeholderText
@@ -688,13 +691,23 @@ static CGFloat const FIELD_MARGIN_X = 4.0; // Note: Same as CLTokenView.PADDING_
     _collapsible = collapsible;
     if (collapsible) {
         UILabel *label = [[UILabel alloc] init];
-        label.font = [UIFont boldSystemFontOfSize:17.0];
-        label.textColor = self.tintColor;
         self.collapsedCountLabel = label;
     } else {
         if (self.collapsedCountLabel != nil) {
             [self.collapsedCountLabel removeFromSuperview];
             self.collapsedCountLabel = nil;
+        }
+    }
+}
+
+#pragma mark - UITapGestureRecognizer
+
+- (void)didTapTokenInputView {
+    if (self.editable) {
+        [self beginEditing];
+    } else {
+        if ([self.delegate respondsToSelector:@selector(didTapTokenInputView:)]) {
+            [self.delegate didTapTokenInputView:self];
         }
     }
 }
