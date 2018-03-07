@@ -49,20 +49,24 @@ NS_ASSUME_NONNULL_BEGIN
  * Called when the text field text has changed. You should update your autocompleting UI based on the text supplied.
  */
 - (void)tokenInputView:(CLTokenInputView *)view didChangeText:(nullable NSString *)text;
+
 /**
  * Called when a token has been added. You should use this opportunity to update your local list of selected items.
  */
 - (void)tokenInputView:(CLTokenInputView *)view didAddToken:(CLToken *)token;
+
 /**
  * Called when a token has been removed. You should use this opportunity to update your local list of selected items.
  */
 - (void)tokenInputView:(CLTokenInputView *)view didRemoveToken:(CLToken *)token;
+
 /** 
  * Called when the user attempts to press the Return key with text partially typed.
  * @return A CLToken for a match (typically the first item in the matching results),
  * or nil if the text shouldn't be accepted.
  */
 - (nullable CLToken *)tokenInputView:(CLTokenInputView *)view tokenForText:(NSString *)text;
+
 /**
  * Called when the view has updated its own height. If you are
  * not using Autolayout, you should use this method to update the
@@ -70,25 +74,43 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)tokenInputView:(CLTokenInputView *)view didChangeHeightTo:(CGFloat)height;
 
-
 /**
  * Called when a token has been double tapped. This is neccessary for 
  * if you need to take an action on a selected token
  */
-
 - (void)tokenInputView:(CLTokenInputView *)view didDoubleTapTokenView:(CLTokenView *)tokenView tokenIndex:(NSInteger)index;
+
+/**
+ * Called when a token has been tapped once. This requires `editable` to be set to `NO`.
+ */
+- (void)tokenInputView:(CLTokenInputView *)view didTapTokenView:(CLTokenView *)tokenView tokenIndex:(NSInteger)index;
+
+/**
+ * Called when the token input view has been tapped, not a token.
+ */
+- (void)didTapTokenInputView:(CLTokenInputView *)tokenInputView;
 
 @end
 
 @interface CLTokenInputView : UIView
 
 @property (weak, nonatomic, nullable) IBOutlet NSObject <CLTokenInputViewDelegate> *delegate;
-/** An optional view that shows up presumably on the first line */
-@property (strong, nonatomic, nullable) UIView *fieldView;
-/** Option text which can be displayed before the first line (e.g. "To:") */
+
+/**
+ A `CLBackspaceDetectingTextField` exposed for font customization.
+ */
+@property (nonatomic, nonnull, strong, readonly) UITextField *textField;
+
+/**
+ The label that describes the field.
+ */
+@property (nonatomic, nonnull, strong, readonly) UILabel *fieldLabel;
+
+/**
+ The name of the `fieldLabel` (e.g. "To:")
+ */
 @property (copy, nonatomic, nullable) IBInspectable NSString *fieldName;
-/** Color of optional */
-@property (strong, nonatomic, nullable) IBInspectable UIColor *fieldColor;
+
 @property (copy, nonatomic, nullable) IBInspectable NSString *placeholderText;
 @property (strong, nonatomic, nullable) UIView *accessoryView;
 @property (assign, nonatomic) IBInspectable UIKeyboardType keyboardType;
@@ -106,8 +128,27 @@ NS_ASSUME_NONNULL_BEGIN
 @property (assign, nonatomic) IBInspectable BOOL drawBottomBorder;
 @property (assign, nonatomic) CGFloat bottomBorderPadding;
 
-/** Tokens will collapse into one line when first responder is lost */
+/**
+ If true, tokens will collapse into one line when first responder is lost
+ */
 @property (assign, nonatomic) BOOL collapsible;
+
+/**
+ If true, the user will be able to add and remove tokens. If false, it's basically a collapsed,
+ read-only view, and you can use tokenInputView:didTapTokenView:tokenIndex: to interact with it.
+ */
+@property (assign, nonatomic) BOOL editable;
+
+/**
+ If true, the comma following the last token will be hidden
+ */
+@property (nonatomic, assign) BOOL shouldHideLastComma;
+
+/**
+ Padding overrides
+ */
+@property (assign, nonatomic) CGFloat paddingTop;
+@property (assign, nonatomic) CGFloat paddingLeft;
 
 @property (readonly, nonatomic) CL_GENERIC_ARRAY(CLToken *) *allTokens;
 @property (readonly, nonatomic, getter = isEditing) BOOL editing;
